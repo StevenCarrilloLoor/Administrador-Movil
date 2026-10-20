@@ -9,7 +9,7 @@
 | S2 | Crear la cuenta de servicio de la API de Play | `docs/api-play.md`, pasos 1-5 (≈15 min) | `movil play credencial comprobar` → `"ok": true` |
 | S3 | Reunir 12+ testers con Android dispuestos a 14 días seguidos | Idealmente en un Grupo de Google (`docs/publicar-en-play.md`, paso 6) | Lista o grupo creado |
 | S4 | Decidir dónde se publica la política de privacidad (URL pública) | Recomendado: GitHub Pages en un repo público suyo (`StevenCarrilloLoor/...`); la IA redacta el texto | URL que abre |
-| S5 | Decir de qué trata la app nueva | En el chat de administración | Ficha creada en `apps/` |
+| S5 | Decidir la app nueva | Idea del 20-oct-2026: que su hermano vea videos musicales en el carro «por CarPlay», transmitiendo la pantalla del teléfono. Diagnóstico dado: CarPlay es de iPhone; Android Auto no admite apps que replican la pantalla (regla PC-1 de la calidad de apps para coches) y solo deja vídeo con el carro parado (beta, Android 16, carros compatibles). Propuesta: «reproductor del asiento de atrás» en una tablet, sin internet, con sonido por Bluetooth al carro. Steven lo está pensando; aún no tiene aparato ni ha decidido de dónde salen los videos | Steven elige enfoque, aparato y origen de los videos; entonces ficha en `apps/` y su conversación |
 | S6 | Copia de seguridad de cada clave de subida real | `docs/firma-y-claves.md`, «Copia de seguridad» | Copia fuera del PC |
 | S7 | ¿Tiene iPhone para probar iOS algún día? | Respuesta en el chat | Anotado en `docs/tecnologia-e-ios.md` |
 | S8 | Revisar el borrador de política de privacidad | `plantillas/politica-privacidad.md` (no es asesoría legal) | Visto bueno o cambios |
