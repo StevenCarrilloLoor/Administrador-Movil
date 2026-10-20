@@ -3,7 +3,8 @@
 revisión, pruebas en el laboratorio y publicación por la API. Cada app se desarrolla en su propia conversación y le
 responde a este administrador (`docs/protocolo-apps.md`). **Cuándo leerlo:** siempre que se trabaje en publicar o
 administrar una app móvil. **Estado:** VIVO — comprobado el 20-oct-2026: laboratorio y cadena de firma probados de punta
-a punta con el canario; API de Play SIN COMPROBAR (falta la credencial, la crea Steven). **Fuente de verdad:** `movil.py`,
+a punta con el canario, auditados en contexto limpio y corregidos (`CAMBIOS.md` nº 2); API de Play SIN COMPROBAR (falta
+la credencial, la crea Steven). **Fuente de verdad:** `movil.py`,
 `apps/registro.json` y los documentos de `docs/`.
 
 ## Lee primero, en este orden
@@ -32,7 +33,7 @@ Todas imprimen JSON y salen con 0 si todo fue bien.
 | APK para un amigo | `movil apk-universal <app> <…-firmado.aab>` | `"verificado": true` (ver TRAMPA en `docs/firma-y-claves.md`) |
 | Estado en Play | `movil play estado <paquete>` | pistas (SUPUESTO: sin credencial aún) |
 | Subir a prueba interna | `movil play subir <app> <…-firmado.aab> --notas-es "…"` | `pista: internal` (SUPUESTO) |
-| Pruebas de esta herramienta | `.venv\Scripts\python.exe -I -m pytest -q` (desde esta carpeta) | `17 passed, 2 deselected`; con `-m herramientas`, `2 passed` |
+| Pruebas de esta herramienta | `.venv\Scripts\python.exe -I -B -m pytest -q -p no:cacheprovider` (desde esta carpeta) | `31 passed, 2 deselected`; con `-m herramientas`, `2 passed` y después `cmdkey /list:android-firma-prueba*` → `* NONE *` |
 | Laboratorio | `lab estado` · `lab arrancar --instancia N` · `lab apagar --instancia N` | detalle en `..\Android Laboratorio\AGENTS.md` |
 
 ## Reglas (con su porqué)
@@ -57,8 +58,8 @@ Todas imprimen JSON y salen con 0 si todo fue bien.
 |---|---|
 | Este hub (git local) | `C:\Users\steve\Desktop\TRABAJOS GENERATIVOS\Aplicaciones propias\Moviles\Administrador Movil` |
 | Laboratorio (git local) y canario | `…\Moviles\Android Laboratorio` |
-| AVD, evidencias, construcciones, bundletool | `D:\AndroidLaboratorio\` (`avd`, `evidencias\<fecha>`, `construcciones`, `herramientas`) |
-| Firmas y credencial de Play | `%USERPROFILE%\.secretos-moviles\` + Administrador de credenciales |
+| AVD, evidencias, construcciones, bundletool | `D:\AndroidLaboratorio\` (`avd`, `evidencias\<fecha>`, `construcciones`, `herramientas`; `pruebas-fuego` = ensayos desechables) |
+| Firmas y credencial de Play | `%USERPROFILE%\.secretos-moviles\` (`firmas\<app>\`, `play-api.dpapi`, `tmp\` que se vacía solo) + Administrador de credenciales |
 | SDK / JDK | `%LOCALAPPDATA%\Android\Sdk` / `C:\Program Files\Amazon Corretto\jdk17.0.17_10` |
 | Apps | Carpeta propia de cada una (`apps/registro.json`, campo `carpeta`); las nuevas en `…\Moviles\<Nombre>` |
 
@@ -69,6 +70,11 @@ Todas imprimen JSON y salen con 0 si todo fue bien.
   `& "<SDK>\cmdline-tools\latest\bin\android.exe" --no-metrics sdk install "<paquete>"`.
 - **TRAMPA: Compose BOM 2026.09+ exige compileSdk 37** (`docs/tecnologia-e-ios.md`).
 - **TRAMPA: un APK universal no se actualiza desde Play** (firma de subida ≠ firma de Play).
+- **TRAMPA (MEDIDA): `jarsigner -verify -strict` sale con 4 en TODA clave de Android** (son autofirmadas). La firma se
+  da por buena con código 0, «jar verified», sin «unsigned entries» y con UN solo firmante: el de la clave de subida.
+- **Pistas de producción también son `wear:production`, `tv:production`, `automotive:production`:** piden
+  `--confirmo-produccion`. Las pistas cerradas pueden tener nombre propio: piden `--confirmo`.
+- La auditoría del 20-oct-2026 y sus 22 arreglos: `CAMBIOS.md` nº 2 (y el del laboratorio).
 - Las del laboratorio (instancias de solo lectura, instantáneas que se cuelgan): `..\Android Laboratorio\AGENTS.md`.
 - **Una sesión no deja un `cd` puesto en estas carpetas** (regla 7 de `TRABAJOS GENERATIVOS\MAPA.md`): rutas absolutas.
 

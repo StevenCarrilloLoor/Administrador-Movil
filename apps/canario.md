@@ -12,7 +12,8 @@ Un texto «Canario del laboratorio», un contador «Pulsaciones: N» guardado en
 | Para qué | Comando | Resultado |
 |---|---|---|
 | Compilar | `( cd "…\Android Laboratorio\canario" && JAVA_HOME="C:\Program Files\Amazon Corretto\jdk17.0.17_10" ./gradlew.bat assembleDebug bundleRelease testDebugUnitTest lintDebug )` | BUILD SUCCESSFUL: 231 s en frío y 4 s en caliente; 5/5 pruebas |
-| Humo completo en el laboratorio | `python lab.py guion guiones\canario-humo.json --instancia 0` | 20/20 en 42 s; con dos instancias a la vez, 20/20 en cada una |
+| Humo completo en el laboratorio | `python lab.py guion guiones\canario-humo.json --instancia 0` | 20/20 en 37 s, el último paso encuentra `CANARIO_FALLO_PROVOCADO` (tras la auditoría); con dos instancias a la vez, 20/20 en cada una |
+| Autoprueba negativa | `python lab.py guion guiones\autoprueba-sin-cierre-debe-fallar.json` | sale con 1: 6/6 hechos, el último en rojo (`encontrado: false`) |
 | Cadena de firma | `movil.bat revisar` → `firmar canario` → `probar …-firmado.aab --guion guiones\canario-humo-sin-instalar.json` → `apk-universal canario` | revisar sin bloqueos (2 .so de Compose alineadas a 16 KB); firma con sha256 `8E:96:C8:5A:…:38:AD`; probar 8/8, arranque en frío 971 ms; APK verificado |
 
 Clave de subida de PRUEBA: `android-firma-canario` y `%USERPROFILE%\.secretos-moviles\firmas\canario\`. Solo para esto.

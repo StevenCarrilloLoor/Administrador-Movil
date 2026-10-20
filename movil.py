@@ -217,27 +217,43 @@ def cuerpo_pista(pista: str, version_code: int, estado: str, notas: dict[str, st
     return {"track": pista, "releases": [release]}
 
 
+def es_produccion(pista: str) -> bool:
+    """`production` y las de producción por tipo de dispositivo (`wear:production`, `tv:production`…), que la API
+    acepta como identificadores de pista (auditoría PUE-01)."""
+    p = (pista or "").strip().lower()
+    return p == "production" or p.endswith(":production")
+
+
 def exigir_permiso_pista(pista: str, confirmo: bool, confirmo_produccion: bool) -> None:
-    if pista == "production":
+    if es_produccion(pista):
         if not confirmo_produccion:
             raise Error("Subir a producción exige --confirmo-produccion, y solo tras el «sí» de Steven en el chat "
                         "para ESTA versión.")
-    elif pista != "internal" and not confirmo:
+    elif (pista or "").strip().lower() != "internal" and not confirmo:
         raise Error(f"La pista {pista!r} llega a testers: exige --confirmo, y solo tras el «sí» de Steven en el chat.")
 
 
+def huellas_sha256(texto_keytool: str) -> list[str]:
+    """Todas las huellas SHA-256 que imprime keytool (una por firmante: «Signer #1», «Signer #2»…)."""
+    return re.findall(r"SHA256:\s*([0-9A-F:]{95})", texto_keytool)
+
+
 def huella_sha256(texto_keytool: str) -> str | None:
-    m = re.search(r"SHA256:\s*([0-9A-F:]{95})", texto_keytool)
-    return m.group(1) if m else None
+    h = huellas_sha256(texto_keytool)
+    return h[0] if h else None
 
 
 def leer_solicitud(texto: str) -> dict:
-    """Cabecera de publicacion/SOLICITUD.md: líneas «Clave: valor» hasta la primera línea vacía tras el título."""
+    """Cabecera de publicacion/SOLICITUD.md: líneas «Clave: valor» hasta la primera línea vacía o el primer «## »
+    después de leer alguna. No pisa una clave ya leída (auditoría SOL-01)."""
     datos = {}
     for linea in texto.splitlines()[1:40]:
-        m = re.match(r"\*{0,2}([A-Za-zÁÉÍÓÚáéíóúñ ]+?):\*{0,2}\s*(.+)$", linea.strip())
+        limpia = linea.strip()
+        if datos and (not limpia or limpia.startswith("## ")):
+            break
+        m = re.match(r"\*{0,2}([A-Za-zÁÉÍÓÚáéíóúñ ]+?):\*{0,2}\s*(.+)$", limpia)
         if m:
-            datos[m.group(1).strip().lower()] = m.group(2).strip()
+            datos.setdefault(m.group(1).strip().lower(), m.group(2).strip())
     return datos
 
 
@@ -424,14 +440,33 @@ def firma_comprobar(app: str) -> dict:
             "ok": huella != "?"}
 
 
-def _huella_firmante(archivo: Path) -> str | None:
+def _huellas_firmantes(archivo: Path) -> list[str]:
+    """Huella SHA-256 de CADA firmante del archivo (auditoría FIR-01: antes solo se leía el primero)."""
     r = _correr([KEYTOOL, "-printcert", "-jarfile", archivo], timeout=60)
-    return huella_sha256(r.stdout + r.stderr)
+    return huellas_sha256(r.stdout + r.stderr)
+
+
+def _huella_firmante(archivo: Path) -> str | None:
+    h = _huellas_firmantes(archivo)
+    return h[0] if h else None
 
 
 def _firmado(archivo: Path) -> bool:
+    """Firma íntegra: jarsigner sale con 0, dice «jar verified» y NO hay entradas sin firmar (auditoría FIR-01).
+    TRAMPA MEDIDA (20-oct-2026): `-strict` no sirve, sale con 4 en toda clave de Android porque son autofirmadas."""
     r = _correr([JARSIGNER, "-verify", archivo], timeout=120)
-    return "jar verified" in r.stdout
+    texto = r.stdout + r.stderr
+    return r.returncode == 0 and "jar verified" in texto and "unsigned entries" not in texto
+
+
+def carpeta_temporal() -> Path:
+    """Carpeta temporal dentro de .secretos-moviles (no en %TEMP%), y limpia los restos de ejecuciones muertas a la
+    fuerza: el archivo con la contraseña no puede quedarse en disco (auditoría FIR-03)."""
+    base = SECRETOS / "tmp"
+    base.mkdir(parents=True, exist_ok=True)
+    for resto in base.glob("movil-apk-*"):
+        shutil.rmtree(resto, ignore_errors=True)
+    return Path(tempfile.mkdtemp(prefix="movil-apk-", dir=base))
 
 
 def firmar(app: str, aab: str, salida: str | None = None) -> dict:
@@ -455,21 +490,31 @@ def firmar(app: str, aab: str, salida: str | None = None) -> dict:
                  "-sigalg", "SHA256withRSA", "-digestalg", "SHA-256", "-signedjar", destino, origen, ALIAS],
                 env_extra={"MOVIL_KS": clave}, timeout=300)
     if r.returncode != 0 or not destino.exists():
+        destino.unlink(missing_ok=True)
         raise Error("jarsigner falló: " + _tapar(r.stdout + r.stderr, clave)[-400:])
     huella_esperada, _ = _huella_almacen(rutas["almacen"], clave)
-    huella = _huella_firmante(destino)
-    if not _firmado(destino) or huella != huella_esperada:
-        raise Error(f"La firma no se verifica o no es la clave de subida de {app} (huella {huella}).")
+    huellas = _huellas_firmantes(destino)
+    if not _firmado(destino) or huellas != [huella_esperada]:
+        destino.unlink(missing_ok=True)          # auditoría FIR-02: no dejar un «-firmado» que no lo está
+        raise Error(f"La firma no se verifica o no es SOLO la clave de subida de {app} (firmantes {huellas}).")
     return {"app": app, "paquete": man["paquete"], "version_code": man["version_code"], "firmado": str(destino),
-            "sha256_firmante": huella, "bytes": destino.stat().st_size}
+            "sha256_firmante": huellas[0], "bytes": destino.stat().st_size}
 
 
 def apk_universal(app: str, aab: str, salida: str | None = None) -> dict:
-    """APK único para pasar a amigos fuera de Play, firmado con la clave de subida (ver TRAMPA en AGENTS.md)."""
+    """APK único para pasar a amigos fuera de Play, firmado con la clave de subida (ver TRAMPA en AGENTS.md).
+    Auditoría FIR-02: se valida el AAB antes de tocar la clave y el APK solo llega a su destino ya verificado."""
     origen = Path(aab)
+    if origen.suffix.lower() != ".aab" or not origen.exists():
+        raise Error(f"No existe el .aab {origen}.")
+    esperado = ficha_app(app).get("paquete")
+    paquete = manifiesto_aab(origen)["paquete"]
+    if esperado and paquete != esperado:
+        raise Error(f"El bundle es de {paquete}, pero {app} es {esperado} en el registro: no se firma con su clave.")
     rutas = _rutas_firma(app)
     clave = Boveda().leer(servicio_firma(app))
-    carpeta = Path(tempfile.mkdtemp(prefix="movil-apk-"))
+    destino = Path(salida) if salida else origen.with_name(f"{origen.stem.replace('-firmado', '')}-universal.apk")
+    carpeta = carpeta_temporal()
     try:
         fichero_clave = carpeta / "ks.txt"
         fichero_clave.write_text(clave, encoding="utf-8")
@@ -480,15 +525,19 @@ def apk_universal(app: str, aab: str, salida: str | None = None) -> dict:
         fichero_clave.unlink()
         if r.returncode != 0:
             raise Error("bundletool build-apks falló: " + _tapar(r.stdout + r.stderr, clave)[-500:])
-        destino = Path(salida) if salida else origen.with_name(f"{origen.stem.replace('-firmado', '')}-universal.apk")
+        provisional = carpeta / "universal.apk"
         with zipfile.ZipFile(apks) as z:
-            destino.write_bytes(z.read("universal.apk"))
+            provisional.write_bytes(z.read("universal.apk"))
+        v = _correr([BUILD_TOOLS / "apksigner.bat", "verify", "--print-certs", provisional], timeout=120)
+        huella_apk = re.search(r"SHA-256 digest: ([0-9a-f]{64})", v.stdout)
+        huella_esperada, _ = _huella_almacen(rutas["almacen"], clave)
+        if v.returncode != 0 or not huella_apk or huella_apk.group(1) != huella_esperada.replace(":", "").lower():
+            raise Error(f"El APK no se verifica con la clave de subida de {app}: {_tapar(v.stdout + v.stderr, clave)[-300:]}")
+        shutil.move(str(provisional), str(destino))
     finally:
         shutil.rmtree(carpeta, ignore_errors=True)
-    v = _correr([BUILD_TOOLS / "apksigner.bat", "verify", "--print-certs", destino], timeout=120)
-    huella_apk = re.search(r"SHA-256 digest: ([0-9a-f]{64})", v.stdout)
-    return {"app": app, "apk": str(destino), "bytes": destino.stat().st_size, "verificado": v.returncode == 0,
-            "sha256_firmante": huella_apk.group(1) if huella_apk else None}
+    return {"app": app, "apk": str(destino), "bytes": destino.stat().st_size, "verificado": True,
+            "sha256_firmante": huella_apk.group(1)}
 
 
 # ======================================================================== órdenes: revisar y probar
@@ -511,8 +560,10 @@ def revisar(aab: str) -> dict:
     bloqueos = veredicto(man, r16k)
     if valida.returncode != 0:
         bloqueos.insert(0, "bundletool validate falló: " + (valida.stdout + valida.stderr).strip()[-300:])
+    firmantes = _huellas_firmantes(origen)
     return {"aab": str(origen), "bytes": origen.stat().st_size, "firmado": _firmado(origen),
-            "sha256_firmante": _huella_firmante(origen), "manifiesto": {k: v for k, v in man.items() if k != "permisos"},
+            "sha256_firmante": firmantes[0] if firmantes else None, "sha256_firmantes": firmantes,
+            "manifiesto": {k: v for k, v in man.items() if k != "permisos"},
             "permisos": [p["nombre"] for p in man["permisos"]], "declaraciones_play": declaraciones(man),
             "16k": r16k, "bloqueos": bloqueos, "ok": not bloqueos}
 
@@ -613,14 +664,20 @@ def play_estado(paquete: str, servicio=None) -> dict:
     validar_paquete(paquete)
     s = servicio or _servicio_play()
     edits = s.edits()
+    edit_id = None
     try:
-        edit = edits.insert(packageName=paquete, body={}).execute()
-        pistas = edits.tracks().list(packageName=paquete, editId=edit["id"]).execute().get("tracks", [])
-        edits.delete(packageName=paquete, editId=edit["id"]).execute()
+        edit_id = edits.insert(packageName=paquete, body={}).execute()["id"]
+        pistas = edits.tracks().list(packageName=paquete, editId=edit_id).execute().get("tracks", [])
     except Exception as e:  # noqa: BLE001
         if type(e).__name__ == "HttpError":
             raise _error_google(e) from e
         raise
+    finally:          # auditoría PUE-03: el edit de solo lectura se borra siempre
+        if edit_id:
+            try:
+                edits.delete(packageName=paquete, editId=edit_id).execute()
+            except Exception:  # noqa: BLE001
+                pass
     return {"paquete": paquete, "pistas": pistas}
 
 
@@ -631,12 +688,15 @@ def play_subir(app: str, aab: str, pista: str = "internal", estado: str = "compl
     exigir_permiso_pista(pista, confirmo, confirmo_produccion)
     origen = Path(aab)
     ficha = ficha_app(app)
+    if ficha.get("publicable") is not True:          # auditoría PUE-02 (el canario, por ejemplo)
+        raise Error(f"{app} no es publicable según apps/registro.json («publicable»: {ficha.get('publicable')}).")
     rev = revisar(str(origen))
     if not rev["ok"]:
         raise Error("El bundle no pasa la revisión: " + " | ".join(rev["bloqueos"]))
     huella_esperada = firma_comprobar(app)["sha256"]
-    if rev["sha256_firmante"] != huella_esperada:
-        raise Error(f"El bundle no está firmado con la clave de subida de {app}: usa `movil.bat firmar {app} …`.")
+    if not rev.get("firmado") or rev.get("sha256_firmantes") != [huella_esperada]:     # auditoría FIR-01
+        raise Error(f"El bundle no está firmado con la clave de subida de {app} (o tiene otros firmantes o entradas "
+                    f"sin firmar): usa `movil.bat firmar {app} …` sobre el AAB sin firmar.")
     paquete = rev["manifiesto"]["paquete"]
     if ficha.get("paquete") != paquete:
         raise Error(f"El bundle es de {paquete} y el registro dice {ficha.get('paquete')}.")
@@ -653,7 +713,7 @@ def play_subir(app: str, aab: str, pista: str = "internal", estado: str = "compl
         edits.tracks().update(packageName=paquete, editId=edit_id, track=pista, body=cuerpo).execute()
         hecho = edits.commit(packageName=paquete, editId=edit_id,
                              changesNotSentForReview=sin_revision or None).execute()
-    except Exception as e:  # noqa: BLE001
+    except BaseException as e:  # noqa: BLE001 - auditoría PUE-03: también con Ctrl+C se borra el edit abierto
         if edit_id:
             try:
                 edits.delete(packageName=paquete, editId=edit_id).execute()
@@ -672,7 +732,10 @@ def solicitudes() -> dict:
     """Estado de las solicitudes de publicación que dejan las conversaciones de cada app."""
     filas = []
     for app, f in sorted(registro().items()):
-        carpeta = Path(f.get("carpeta", ""))
+        if not f.get("carpeta"):          # auditoría SOL-01: sin carpeta se buscaría en el directorio actual
+            filas.append({"app": app, "pendiente": False, "aviso": "sin «carpeta» en apps/registro.json"})
+            continue
+        carpeta = Path(f["carpeta"])
         sol = carpeta / "publicacion" / "SOLICITUD.md"
         resp = carpeta / "publicacion" / "RESPUESTA.md"
         fila = {"app": app, "carpeta": str(carpeta), "estado_registro": f.get("estado")}

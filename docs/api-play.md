@@ -41,13 +41,18 @@ que las subidas a pruebas no dependan de que Steven pulse nada.
 | Producción gradual | `… --pista production --estado inProgress --fraccion 0.2 --confirmo-produccion` | `pista: production` |
 | Sin enviar a revisión | `… --sin-revision` (Steven la envía en la consola) | `enviado_a_revision: false` |
 
-`play subir` antes de llamar a Google: pasa `revisar` (bloqueos fuera), comprueba que el AAB está firmado con la clave
-de subida de esa app y que el paquete coincide con `apps/registro.json`. Si algo falla a mitad, borra el edit abierto.
+`play subir` antes de llamar a Google: exige que la app sea `"publicable": true` en `apps/registro.json`, pasa
+`revisar` (bloqueos fuera), comprueba que el AAB está firmado entero y SOLO con la clave de subida de esa app y que el
+paquete coincide con el registro. Si algo falla a mitad (también con Ctrl+C), borra el edit abierto; `play estado`
+borra siempre el suyo. Pistas: `internal` sin más; cualquier otra (alpha, beta o una cerrada con nombre propio) con
+`--confirmo`; `production` y las de producción por dispositivo (`wear:production`, `tv:production`,
+`automotive:production`) con `--confirmo-produccion`.
 
 ## Si algo falla
 | Síntoma | Causa | Qué hacer |
 |---|---|---|
 | «No hay credencial de la API de Play en este PC…» (MEDIDO) | Pasos 1-6 sin hacer | Hacerlos |
+| «<app> no es publicable según apps/registro.json…» (MEDIDO con el canario) | `publicable` no es `true` | Si es una app de verdad lista para Play, el administrador lo cambia en el registro |
 | «DPAPI falló…» | Otro usuario de Windows u otro PC | Repetir el paso 4 (clave nueva) y el 6 en este PC |
 | «Google rechazó la credencial…» | Clave borrada o cuenta de servicio desactivada en Cloud | Clave nueva (paso 4) y `credencial guardar … --reemplazar` |
 | «La API de Play respondió 403…» | La cuenta de servicio no está invitada, o sin permiso para esa app, o la invitación aún no se aplicó | Revisar el paso 5; esperar unos minutos (SUPUESTO el tiempo) |

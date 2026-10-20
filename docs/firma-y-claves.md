@@ -12,7 +12,13 @@ universal verificados; pruebas `-m herramientas` 2/2). **Fuente de verdad:** `mo
   que barren los agentes) y su contraseña en el Administrador de credenciales como `android-firma-<app>`, usuario
   `upload`, persistencia «solo este PC». Alias de la clave: `upload`. RSA 4096, validez 10 000 días.
 - **Nadie ve la contraseña:** `movil.py` la genera (32 bytes aleatorios), la pasa a keytool/jarsigner por variable de
-  entorno del proceso hijo (`-storepass:env`) y a bundletool por un archivo temporal que borra al momento.
+  entorno del proceso hijo (`-storepass:env`) y a bundletool por un archivo temporal en
+  `%USERPROFILE%\.secretos-moviles\tmp\movil-apk-*` (no en %TEMP%) que se borra al terminar y, si un proceso muerto a
+  la fuerza lo dejó, al empezar la siguiente orden.
+- **Una firma vale** si jarsigner sale con 0, dice «jar verified», no hay «unsigned entries» y hay UN solo firmante, el de
+  la clave de subida. TRAMPA MEDIDA: `-strict` no sirve (sale con 4 en toda clave de Android, por ser autofirmada).
+  Si la verificación falla, `firmar` borra el `-firmado.aab` y `apk-universal` no deja el APK (se verifica antes de
+  moverlo a su sitio); `apk-universal` también comprueba que el AAB sea del paquete de esa app.
 - **Las apps no firman su release:** su Gradle no lleva `signingConfig` de release; entregan el AAB sin firmar y lo
   firma `movil.bat firmar`. Así ninguna conversación de app toca una clave.
 

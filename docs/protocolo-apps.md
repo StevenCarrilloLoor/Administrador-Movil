@@ -27,19 +27,32 @@ revisar una solicitud. **Estado:** VIVO — acordado con Steven el 20-oct-2026; 
 | Formularios de Play Console | Aporta datos (permisos, qué se recoge) | Redacta | Rellena y envía |
 | Ficha `apps/<app>.md` y `registro.json` | Lee | Escribe | — |
 
+## Rutas fijas de cada app (las da por hechas todo el protocolo)
+| Qué | Dónde |
+|---|---|
+| AAB de release sin firmar | `<carpeta de la app>\app\build\outputs\bundle\release\app-release.aab` (Gradle; Expo: `android\app\build\…`) |
+| Guion del laboratorio, sin paso `instalar` | `<carpeta de la app>\pruebas-lab\humo.json` (formato en `..\Android Laboratorio\AGENTS.md`, «Guiones») |
+| Solicitud / respuesta | `<carpeta de la app>\publicacion\SOLICITUD.md` / `RESPUESTA.md` |
+| Instancia del laboratorio | `instancia_lab` en `apps/registro.json`; si está ocupada (`lab estado`), otra libre de la 2 a la 7, dicha en la solicitud. La 0 es del administrador (y del canario, que es suyo) |
+La hora de las solicitudes es la del reloj del PC, que está en hora de Ecuador (MEDIDO: keytool imprime `ECT`).
+
 ## Cómo se hace (una versión, de la app a Play)
 1. **La app desarrolla** en su conversación con su `AGENTS.md` (que incluye el bloque de `plantillas/AGENTS-app.md`).
+   Compilar es cosa suya, en su carpeta.
 2. **La app se prepara** y pega en la solicitud lo que salga:
    - su compilación con pruebas y lint (su `verificar` o `gradlew.bat bundleRelease testReleaseUnitTest lintRelease`)
      → BUILD SUCCESSFUL;
    - `movil.bat revisar <app-release.aab>` → `"ok": true` (o los bloqueos, explicados);
-   - el guion de su app en el laboratorio:
-     `python lab.py arrancar --instancia <N>`, `python lab.py guion <su guion> --instancia <N>` → `"ok": true`, y
-     después `python lab.py apagar --instancia <N>`;
+   - **la prueba de ESTA versión en el laboratorio, con el AAB de release** (no el APK de depuración):
+     `movil.bat probar <app-release.aab> --instancia <N> --guion <carpeta>\pruebas-lab\humo.json` → `"ok": true`.
+     Instala el AAB limpio con bundletool, lo abre, comprueba que no se cierra y corre el guion. Después
+     `python lab.py apagar --instancia <N>`. Un release no es depurable: `archivo_app` y `datos` leen con root, que el
+     laboratorio permite;
    - si usa hardware que el emulador no tiene (Bluetooth), su lista de pruebas en el teléfono real, con fecha.
 3. **La app escribe la solicitud**, copiando `plantillas/SOLICITUD.md` a `<su carpeta>\publicacion\SOLICITUD.md`, con
-   `Estado: PENDIENTE`, y avisa: `SendMessage` a la conversación de administración (si la encuentra con `ListAgents`)
-   o pide a Steven que avise.
+   `Estado: PENDIENTE`, y avisa: busca con `ListAgents` la conversación «Administrador de proyectos móviles» y le manda
+   con `SendMessage` una línea como «Solicitud PENDIENTE de <app> versión <n> en <ruta>, instancia usada <N>». Si no
+   aparece, pide a Steven que avise. El archivo manda: `movil.bat solicitudes` la ve aunque nadie avise.
 4. **El administrador revisa** (`movil.bat solicitudes` → la app sale en `pendientes`): pasa la lista de abajo, repite
    `movil.bat revisar` y `movil.bat probar <aab> --instancia 0 --guion <guion de la app>`, y contesta en
    `publicacion/RESPUESTA.md` con `Veredicto: FALTA` (qué, concreto) o `LISTA`.
@@ -52,7 +65,8 @@ revisar una solicitud. **Estado:** VIVO — acordado con Steven el 20-oct-2026; 
 - [ ] AAB de `bundleRelease`, **sin firmar**, no depurable, versionCode mayor que el último de la ficha.
 - [ ] `movil.bat revisar` sin bloqueos: targetSdk ≥ 36, 16 KB, versionCode válido.
 - [ ] Compila; pruebas en verde; lint sin errores. Prueba nueva para cada arreglo con síntoma.
-- [ ] Guion del laboratorio en verde con ESTA versión y `fallos` limpio (`evidencia` JSON citado).
+- [ ] `movil.bat probar` en verde con el AAB de ESTA versión y su guion (`evidencia` JSON citado). Un cierre que el
+      guion provoca a propósito va con `espera_fallo` + `debe_contener`; cualquier otro cierre suspende.
 - [ ] Hardware que el emulador no tiene: lista manual en teléfono real con fecha y resultado.
 - [ ] Permisos nuevos o cambiados: listados con su declaración (`declaraciones_play`) y su efecto en Seguridad de los datos.
 - [ ] La política de privacidad cubre lo que hace esta versión.

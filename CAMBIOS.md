@@ -27,4 +27,30 @@ firmado un AAB real, huella comprobada, sin restos en la bóveda). Cadena con el
 (sha256 `8E:96:C8:5A:…:38:AD`) → probar en el laboratorio con el AAB firmado (8/8, arranque en frío 971 ms) →
 APK universal verificado. API de Play: SIN COMPROBAR (falta la credencial de Steven).
 
-**Commit:** el primero de este repositorio («Crea el Administrador Móvil…»).
+**Commit:** `c9e9a1e`.
+
+## 2 — 20-oct-2026: auditoría en contexto limpio y arreglos
+**Motivación.** Regla «verificar como un auditor»: 2 revisores Opus (`lab.py`, `movil.py`), 1 verificador Opus que
+intentó refutar cada hallazgo, y 2 pruebas de fuego Sonnet que hicieron tareas reales solo con la documentación
+(manejar el laboratorio; hacer de conversación de app y preparar una solicitud). 22 hallazgos, todos confirmados
+(14 del laboratorio, en su `CAMBIOS.md` nº 2; 8 de aquí). Lo grave del laboratorio (LAB-01): el paso que debía
+demostrar «cierre provocado detectado» pasaba sin cierre. Las pruebas de fuego terminaron sin órdenes fallidas, pero
+tuvieron que adivinar rutas y reglas.
+**Qué se hizo aquí** (primero una prueba que fallara por cada hallazgo, en `pruebas/test_movil.py`):
+- PUE-01: `wear:production`, `tv:production`, `automotive:production` y `Production` exigen `--confirmo-produccion`.
+- FIR-01: se leen TODAS las huellas de firmantes (debe haber una, la de subida); `_firmado` exige código 0, «jar
+  verified» y ninguna «unsigned entries». TRAMPA MEDIDA: `jarsigner -verify -strict` sale con 4 con cualquier clave de
+  Android (autofirmada), así que no sirve.
+- FIR-02: `firmar` borra el `-firmado.aab` si no verifica; `apk-universal` valida el AAB y su paquete antes de leer la
+  clave y verifica el APK (huella incluida) antes de moverlo a su destino.
+- FIR-03: el temporal con la contraseña va a `%USERPROFILE%\.secretos-moviles\tmp` y se limpian restos al empezar.
+- PUE-02: `play subir` exige `"publicable": true`. PUE-03: los edits se borran también con fallo de `list` y con Ctrl+C.
+- SOL-01: `leer_solicitud` se para en la cabecera y no pisa claves; `solicitudes` salta apps sin carpeta.
+- Documentación: rutas fijas de cada app (AAB, `pruebas-lab\humo.json`), la app prueba SU versión con
+  `movil.bat probar <app-release.aab>`, instancia libre si la suya está ocupada, cómo avisar por `ListAgents`, hora
+  del PC = Ecuador, borrador de política de privacidad.
+**Verificación (MEDIDA).** `pytest -q` 31 passed; `-m herramientas` 2 passed sin restos en la bóveda; mutación
+dirigida 14/14 mutantes muertos (sobrevivió uno al principio, «la solicitud pisa claves»: se añadió su prueba). Cadena
+real con el canario: firmar → revisar (`firmado: true`, un firmante) → APK universal verificado (0 restos en `tmp`) →
+`play subir canario` rechazado por no publicable → firmar dos veces rechazado.
+**Commit:** el de esta entrada («Arregla los 8 hallazgos de la auditoría…»).

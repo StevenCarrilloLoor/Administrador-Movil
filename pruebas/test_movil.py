@@ -6,6 +6,7 @@ Las marcadas `herramientas` usan keytool/jarsigner/bundletool y el Administrador
 import json
 import os
 import struct
+import subprocess
 import sys
 import zipfile
 from pathlib import Path
@@ -154,7 +155,7 @@ class Llamada:
 
     def execute(self):
         self.registro.append(self.nombre)
-        if isinstance(self.resultado, Exception):
+        if isinstance(self.resultado, BaseException):        # también KeyboardInterrupt (Ctrl+C)
             raise self.resultado
         return self.resultado
 
@@ -184,8 +185,9 @@ class ServicioFalso:
 def subida_preparada(monkeypatch, tmp_path):
     aab = tmp_path / "a.aab"
     aab.write_bytes(b"PK")
-    monkeypatch.setattr(movil, "ficha_app", lambda app: {"paquete": "com.steven.canario"})
-    monkeypatch.setattr(movil, "revisar", lambda a: {"ok": True, "bloqueos": [], "sha256_firmante": "H",
+    monkeypatch.setattr(movil, "ficha_app", lambda app: {"paquete": "com.steven.canario", "publicable": True})
+    monkeypatch.setattr(movil, "revisar", lambda a: {"ok": True, "bloqueos": [], "firmado": True,
+                                                    "sha256_firmante": "H", "sha256_firmantes": ["H"],
                                                     "manifiesto": {"paquete": "com.steven.canario", "version_code": 3}})
     monkeypatch.setattr(movil, "firma_comprobar", lambda app: {"sha256": "H"})
     return aab
@@ -224,6 +226,152 @@ def test_estado(monkeypatch):
     s = ServicioFalso()
     r = movil.play_estado("com.steven.canario", servicio=s)
     assert s.llamadas == ["insert", "list", "delete"] and r["pistas"] == [{"track": "internal"}]
+
+
+# ------------------------------------------------------------------ auditoría del 20-oct-2026 (PUE, FIR, SOL)
+def test_pistas_de_produccion_por_dispositivo_exigen_su_confirmacion():           # PUE-01
+    for pista in ("wear:production", "automotive:production", "tv:production", "Production", " production "):
+        with pytest.raises(movil.Error, match="producción"):
+            movil.exigir_permiso_pista(pista, True, False)
+        movil.exigir_permiso_pista(pista, False, True)
+    with pytest.raises(movil.Error, match="--confirmo"):
+        movil.exigir_permiso_pista("cerrada-amigos", False, False)          # pista cerrada con nombre propio
+    movil.exigir_permiso_pista("cerrada-amigos", True, False)
+    movil.exigir_permiso_pista("Internal", False, False)
+
+
+def test_huellas_de_todos_los_firmantes():                                         # FIR-01
+    bloque = "Signer #{n}:\n\nCertificate fingerprints:\n\t SHA1: AA\n\t SHA256: {h}\n"
+    texto = bloque.format(n=1, h=":".join(["AB"] * 32)) + bloque.format(n=2, h=":".join(["CD"] * 32))
+    assert movil.huellas_sha256(texto) == [":".join(["AB"] * 32), ":".join(["CD"] * 32)]
+
+
+def test_firmado_rechaza_entradas_sin_firmar(monkeypatch):                         # FIR-01
+    def jarsigner(salida, codigo=0):
+        return lambda cmd, timeout=120, env_extra=None: subprocess.CompletedProcess(cmd, codigo, salida, "")
+    bueno = "jar verified.\n\nWarning:\nThis jar contains entries whose signer certificate is self-signed.\n"
+    monkeypatch.setattr(movil, "_correr", jarsigner(bueno))
+    assert movil._firmado(Path("x.aab")) is True                    # MEDIDO: así sale un AAB bien firmado
+    monkeypatch.setattr(movil, "_correr", jarsigner(bueno + "This jar contains unsigned entries which have not "
+                                                            "been integrity-checked.\n"))
+    assert movil._firmado(Path("x.aab")) is False
+    monkeypatch.setattr(movil, "_correr", jarsigner("jar is unsigned.\n"))
+    assert movil._firmado(Path("x.aab")) is False
+    monkeypatch.setattr(movil, "_correr", jarsigner(bueno, codigo=1))
+    assert movil._firmado(Path("x.aab")) is False
+
+
+def test_subir_rechaza_varios_firmantes(subida_preparada, monkeypatch):           # FIR-01
+    monkeypatch.setattr(movil, "revisar", lambda a: {"ok": True, "bloqueos": [], "firmado": True,
+                                                    "sha256_firmante": "H", "sha256_firmantes": ["H", "OTRA"],
+                                                    "manifiesto": {"paquete": "com.steven.canario", "version_code": 3}})
+    s = ServicioFalso()
+    with pytest.raises(movil.Error, match="firm"):
+        movil.play_subir("canario", str(subida_preparada), servicio=s)
+    assert s.llamadas == []
+
+
+def test_subir_rechaza_firma_no_verificada(subida_preparada, monkeypatch):         # FIR-01
+    monkeypatch.setattr(movil, "revisar", lambda a: {"ok": True, "bloqueos": [], "firmado": False,
+                                                    "sha256_firmante": "H", "sha256_firmantes": ["H"],
+                                                    "manifiesto": {"paquete": "com.steven.canario", "version_code": 3}})
+    with pytest.raises(movil.Error, match="firm"):
+        movil.play_subir("canario", str(subida_preparada), servicio=ServicioFalso())
+
+
+def test_subir_rechaza_app_no_publicable(subida_preparada, monkeypatch):           # PUE-02
+    monkeypatch.setattr(movil, "ficha_app", lambda app: {"paquete": "com.steven.canario", "publicable": False})
+    s = ServicioFalso()
+    with pytest.raises(movil.Error, match="publicable"):
+        movil.play_subir("canario", str(subida_preparada), servicio=s)
+    assert s.llamadas == []
+
+
+def test_estado_borra_el_edit_si_falla():                                          # PUE-03
+    s = ServicioFalso(falla_en="list")
+    with pytest.raises(RuntimeError):
+        movil.play_estado("com.steven.canario", servicio=s)
+    assert s.llamadas == ["insert", "list", "delete"]
+
+
+def test_subir_borra_el_edit_con_ctrl_c(subida_preparada):                         # PUE-03
+    class Interrumpido(ServicioFalso):
+        def upload(self, **kw):
+            self.args["upload"] = kw
+            return Llamada(self.llamadas, "upload", KeyboardInterrupt())
+    s = Interrumpido()
+    with pytest.raises(KeyboardInterrupt):
+        movil.play_subir("canario", str(subida_preparada), servicio=s)
+    assert s.llamadas == ["insert", "upload", "delete"]
+
+
+def test_solicitud_no_pisa_la_cabecera():                                          # SOL-01
+    plantilla = (movil.HUB / "plantillas" / "SOLICITUD.md").read_text(encoding="utf-8")
+    texto = plantilla.replace("<texto>", "Novedades: escaneo más rápido.\nEstado: sin cambios en la batería.")
+    d = movil.leer_solicitud(texto)
+    assert d["estado"] == "PENDIENTE"
+    assert "novedades" not in d
+
+
+def test_solicitud_clave_repetida_en_la_cabecera_no_pisa():                        # SOL-01
+    d = movil.leer_solicitud("# Solicitud de publicación\n**Estado:** PENDIENTE\n**App:** x\nEstado: OTRO\n")
+    assert d["estado"] == "PENDIENTE"
+
+
+def test_solicitudes_salta_apps_sin_carpeta(monkeypatch):                          # SOL-01
+    monkeypatch.setattr(movil, "registro", lambda: {"sin-carpeta": {"paquete": "com.x.y"}})
+    r = movil.solicitudes()
+    assert r["pendientes"] == [] and r["apps"][0].get("aviso")
+
+
+def test_apk_universal_rechaza_aab_de_otra_app_sin_leer_la_clave(monkeypatch, tmp_path):   # FIR-02
+    aab = tmp_path / "otra.aab"
+    aab.write_bytes(b"PK")
+    monkeypatch.setattr(movil, "ficha_app", lambda app: {"paquete": "com.steven.canario"})
+    monkeypatch.setattr(movil, "manifiesto_aab", lambda a: {"paquete": "com.steven.buscadorble"})
+
+    class BovedaQueNoSeDebeLeer:
+        def leer(self, serv):
+            raise AssertionError("se leyó la clave antes de validar el AAB")
+    monkeypatch.setattr(movil, "Boveda", BovedaQueNoSeDebeLeer)
+    with pytest.raises(movil.Error, match="buscadorble"):
+        movil.apk_universal("canario", str(aab))
+    with pytest.raises(movil.Error):
+        movil.apk_universal("canario", str(tmp_path / "no-existe.aab"))
+
+
+def test_firmar_borra_el_resultado_si_no_verifica(monkeypatch, tmp_path):          # FIR-02
+    aab = tmp_path / "app-release.aab"
+    aab.write_bytes(b"PK")
+    monkeypatch.setattr(movil, "ficha_app", lambda app: {"paquete": "com.steven.canario"})
+    monkeypatch.setattr(movil, "manifiesto_aab", lambda a: {"paquete": "com.steven.canario", "depurable": False,
+                                                            "version_code": 1})
+    monkeypatch.setattr(movil, "_firmado", lambda a: False)
+    monkeypatch.setattr(movil, "_huellas_firmantes", lambda a: ["OTRA"])
+    monkeypatch.setattr(movil, "_huella_almacen", lambda almacen, clave: ("H", "?"))
+
+    class BovedaFalsa:
+        def leer(self, serv):
+            return "contrasena-de-prueba"
+    monkeypatch.setattr(movil, "Boveda", BovedaFalsa)
+
+    def jarsigner_falso(cmd, timeout=300, env_extra=None):
+        Path(str(cmd[cmd.index("-signedjar") + 1])).write_bytes(b"PK firmado")
+        return subprocess.CompletedProcess(cmd, 0, "", "")
+    monkeypatch.setattr(movil, "_correr", jarsigner_falso)
+    with pytest.raises(movil.Error):
+        movil.firmar("canario", str(aab))
+    assert not (tmp_path / "app-release-firmado.aab").exists()
+
+
+def test_temporales_fuera_de_temp_y_se_limpian(monkeypatch, tmp_path):             # FIR-03
+    monkeypatch.setattr(movil, "SECRETOS", tmp_path / "s")
+    resto = tmp_path / "s" / "tmp" / "movil-apk-viejo"
+    resto.mkdir(parents=True)
+    (resto / "ks.txt").write_text("restos", encoding="utf-8")
+    carpeta = movil.carpeta_temporal()
+    assert carpeta.parent == tmp_path / "s" / "tmp"
+    assert not resto.exists()
 
 
 # ------------------------------------------------------------------ DPAPI y credencial (sin red)
