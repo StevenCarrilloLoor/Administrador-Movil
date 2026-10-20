@@ -68,9 +68,18 @@ nombres, la visibilidad y la firma del APK: «Sí, los tres así» y «Con su cl
 - Repos creados: `Administrador-Movil` (público), `Android-Laboratorio` (privado) y `Buscador-Bluetooth-Geiger`
   (público), este con la Release `v4.0-fase4`.
 
-**TRAMPA (MEDIDA).** Un comentario del `.gitignore` con forma de asignación («Secretos: claves…») dio ALTO 1 en
-`revisar_secretos.py`. Se corrigió la redacción y se rehízo el commit, que aún no estaba subido, para que el historial
-quedara limpio.
+**TRAMPA (MEDIDA).** Un comentario del `.gitignore` que empezaba por la palabra «Secretos» seguida de dos puntos y
+otra palabra parece una asignación de clave y dio ALTO 1 en `revisar_secretos.py`. Se corrigió la redacción y se
+rehízo el commit, que aún no estaba subido, para que el historial quedara limpio.
+
+**TRAMPA (MEDIDA): la misma frase citada en esta bitácora volvió a dar ALTO 1, y se subió.** El guion encadenaba
+`revisar_secretos.py … | tail -1` y después `git push`; la tubería devolvía el código de `tail` (0), así que `set -e`
+no paró. No había ningún secreto, solo la cita de la frase de arriba. El commit `6848468` quedó en el historial público
+con ese falso positivo: no se reescribe, porque nada de `push --force` y no hay nada que ocultar. Desde el commit
+siguiente el árbol vuelve a dar ALTO 0, y `--historia` seguirá marcando ALTO 1 en `6848468 CAMBIOS.md`, que es
+**falso positivo conocido**. Regla nueva: antes de un `push`, el escáner se comprueba por su código de salida
+(`python -I revisar_secretos.py <carpeta> --todo && python -I revisar_secretos.py <carpeta> --historia && git push`),
+nunca con una tubería delante.
 
 **Verificación (MEDIDA).**
 - `revisar_secretos.py --todo` y `--historia`: ALTO 0 en los tres.

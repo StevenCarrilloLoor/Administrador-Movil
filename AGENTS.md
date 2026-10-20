@@ -62,7 +62,7 @@ Todas imprimen JSON y salen con 0 si todo fue bien.
 | Firmas y credencial de Play | `%USERPROFILE%\.secretos-moviles\` (`firmas\<app>\`, `play-api.dpapi`, `tmp\` que se vacía solo) + Administrador de credenciales |
 | SDK / JDK | `%LOCALAPPDATA%\Android\Sdk` / `C:\Program Files\Amazon Corretto\jdk17.0.17_10` |
 | Apps | Carpeta propia de cada una (`apps/registro.json`, campo `carpeta`); las nuevas en `…\Moviles\<Nombre>` |
-| GitHub (20-oct-2026, con el «sí» de Steven) | `StevenCarrilloLoor/Administrador-Movil` (público), `Android-Laboratorio` (privado), `Buscador-Bluetooth-Geiger` (público, Release `v4.0-fase4` con el APK firmado con su clave de subida). Antes de cada `push`: `revisar_secretos.py <carpeta> --todo` y `--historia` con ALTO 0 (`TRABAJOS GENERATIVOS\_archivo\orden-20261020\SUBIR-A-GITHUB.md`) |
+| GitHub (20-oct-2026, con el «sí» de Steven) | `StevenCarrilloLoor/Administrador-Movil` (público), `Android-Laboratorio` (privado), `Buscador-Bluetooth-Geiger` (público, Release `v4.0-fase4` con el APK firmado con su clave de subida). Antes de cada `push`: `python -I revisar_secretos.py <carpeta> --todo && python -I revisar_secretos.py <carpeta> --historia && git push`, encadenado por código de salida y nunca con una tubería delante (TRAMPA en `CAMBIOS.md` nº 3; en el hub, `--historia` marca un falso positivo conocido en `6848468`). Guía: `TRABAJOS GENERATIVOS\_archivo\orden-20261020\SUBIR-A-GITHUB.md` |
 
 ## Trampas ya pisadas (detalle en el documento enlazado)
 - **TRAMPA: `java` del PATH es Java 8.** Todo lo que compile pone `JAVA_HOME` a Corretto 17.
