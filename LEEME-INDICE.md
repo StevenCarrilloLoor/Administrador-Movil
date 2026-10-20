@@ -13,6 +13,7 @@ Una línea por documento: la pregunta que contesta (su «Cuándo leerlo»). Se a
 | `docs/investigacion-20261020.md` | Para ver la fuente o el matiz de un dato de requisitos-play.md (HISTÓRICO). |
 | `apps/registro.json` | Qué apps hay, su paquete, su carpeta y su instancia del laboratorio (lo leen las herramientas). |
 | `apps/<app>.md` | Antes de hablar con la conversación de una app o de revisar una solicitud suya. |
+| `apps/<app>-encargo.md` | Al lanzar la conversación de una app o para saber qué se le pidió. |
 | `plantillas/SOLICITUD.md`, `RESPUESTA.md`, `AGENTS-app.md` | Al pedir o contestar una publicación, o al preparar el `AGENTS.md` de una app. |
 | `plantillas/politica-privacidad.md` | Al preparar la ficha de una app (paso 5 de `docs/publicar-en-play.md`). |
 | `PENDIENTES.md` | Al empezar una sesión: qué falta y quién lo tiene que hacer. |

@@ -24,4 +24,4 @@
 | A5 | Decidir con Steven si se instala `platforms;android-37.0` (67 MB) para usar Compose BOM 2026.09+ | Instalado o descartado |
 | A6 | Mover `Buscador Bluetooth Geiger` dentro de `Aplicaciones propias\Moviles\` | Solo con permiso de Steven y de su conversación («PUEDES MOVER»), regla 5 de MAPA.md |
 | A7 | Plantilla de política de privacidad en español para apps sin recogida de datos | HECHO el borrador (20-oct-2026); falta S8 |
-| A8 | Abrir la conversación del Buscador Geiger con su lista de `apps/buscador-geiger.md` | Conversación abierta y su `AGENTS.md` con el bloque de `plantillas/AGENTS-app.md` |
+| A8 | Abrir la conversación de Baliza con el encargo de `apps/buscador-geiger-encargo.md` (Steven lo pidió el 20-oct-2026; desde el control remoto la app no deja abrir conversaciones) | Lanzada desde un mensaje escrito en la app de escritorio |
