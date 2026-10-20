@@ -5,7 +5,16 @@ conversación o de revisar una solicitud suya. **Estado:** VIVO — revisión do
 `C:\Users\steve\Desktop\TRABAJOS GENERATIVOS\Aplicaciones propias\Buscador Bluetooth Geiger` (git local, 5 commits,
 último `d2127f6` «Fase 4»).
 
+## Objetivos de Steven (20-oct-2026)
+Sus palabras: «mejoremos el proyecto, corrige bugs, mejora la precisión usando matemática súper avanzada, haz pruebas
+súper rigurosas, que sea súper precisa y que sea una herramienta potente y efectiva; además hay un montón de
+aplicaciones de ese estilo en la Play Store pero son todas de modelos de suscripción; algo tan útil como para buscar
+unos audífonos que se te pierden o algún aparato siempre es bienvenido; además mejorar la usabilidad y la
+identificación para que sea más fácil de usar para el usuario promedio». Se encargó a su conversación propia
+(«Baliza: precisión, pruebas y listo para Play», nombre `buscador-geiger`), que primero mide y escribe un `SPEC.md`.
+
 ## Datos
+- Nombre de la app: **Baliza** (buscador Bluetooth + administrador de la red WiFi). Fases 1-4 cerradas según su README.
 - Kotlin + Jetpack Compose, BLE nativo; reglas propias en su `CLAUDE.md` (prohíbe migrar a multiplataforma).
 - `compileSdk 35`, `targetSdk 35`, `minSdk 26`, versionCode 4 (`4.0-fase4`); AGP 8.x de 2024, Gradle 8.9, Compose BOM
   2024.10.01, Room 2.6.1, KSP.
