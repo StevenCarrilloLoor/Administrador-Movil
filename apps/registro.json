@@ -1,0 +1,22 @@
+{
+ "canario": {
+  "nombre": "Canario del laboratorio",
+  "paquete": "com.steven.canario",
+  "carpeta": "C:\\Users\\steve\\Desktop\\TRABAJOS GENERATIVOS\\Aplicaciones propias\\Moviles\\Android Laboratorio\\canario",
+  "tecnologia": "Kotlin + Jetpack Compose (AGP 9.4.0, Gradle 9.6.0, Kotlin 2.4.21)",
+  "estado": "fixture",
+  "publicable": false,
+  "instancia_lab": 0,
+  "ficha": "apps/canario.md"
+ },
+ "buscador-geiger": {
+  "nombre": "Buscador Bluetooth Geiger",
+  "paquete": "com.steven.buscadorble",
+  "carpeta": "C:\\Users\\steve\\Desktop\\TRABAJOS GENERATIVOS\\Aplicaciones propias\\Buscador Bluetooth Geiger",
+  "tecnologia": "Kotlin + Jetpack Compose (AGP 8.x, Gradle 8.9; hay que migrar a AGP 9)",
+  "estado": "desarrollo",
+  "publicable": true,
+  "instancia_lab": 1,
+  "ficha": "apps/buscador-geiger.md"
+ }
+}
