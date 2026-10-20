@@ -57,6 +57,8 @@ más fácil de usar para el usuario promedio.»
     estabilidad del orden de la lista.
 - **Auditoría de bugs por áreas:** agentes en paralelo según las reglas globales (modelo por etapa) y un verificador que
   intente refutar cada hallazgo. Cada hallazgo con `archivo:línea`, y con un escenario si se pudo reproducir.
+  - Incluye los `.bat` heredados. `build2.bat` hace `git add -A` y, si existe `proyecto_buscador_ble.zip`,
+    `rmdir /S /Q app\src`: es un resto peligroso que hay que revisar o quitar.
 
 **Fase 1 — `SPEC.md` autocontenido.** Qué se mejora, con qué matemática y por qué, cómo se medirá la mejora,
 archivos, qué queda fuera y la verificación de punta a punta. Pregunta a Steven lo que falte y espera su visto bueno
