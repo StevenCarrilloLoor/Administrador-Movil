@@ -53,4 +53,28 @@ tuvieron que adivinar rutas y reglas.
 dirigida 14/14 mutantes muertos (sobrevivió uno al principio, «la solicitud pisa claves»: se añadió su prueba). Cadena
 real con el canario: firmar → revisar (`firmado: true`, un firmante) → APK universal verificado (0 restos en `tmp`) →
 `play subir canario` rechazado por no publicable → firmar dos veces rechazado.
-**Commit:** el de esta entrada («Arregla los 8 hallazgos de la auditoría…»).
+**Commit:** `e94169b`.
+
+## 3 — 20-oct-2026: subida a GitHub (orden de Steven, coordinada por «ADMINISTRADOR DE GITHUB Y CARPETAS»)
+**Motivación.** Steven: «hay que subirlos para que se documente todo, con su exe, sus instrucciones y sus dependencias
+de instalación; por ahora los entrenadores van en privado y lo demás en público; cuidado con subir credenciales».
+Llegó reenviada por la sesión coordinadora, así que el «sí» se le pidió a Steven en esta conversación, con los
+nombres, la visibilidad y la firma del APK: «Sí, los tres así» y «Con su clave de subida».
+**Qué se hizo.**
+- README para personas en el hub y en el laboratorio; `.gitignore` de secretos en el laboratorio y en el Buscador.
+- Clave de subida del Buscador creada.
+- El Buscador recompilado (`verificar.bat` en verde), con su AAB de release revisado, firmado, convertido en APK
+  universal y probado en el laboratorio.
+- Repos creados: `Administrador-Movil` (público), `Android-Laboratorio` (privado) y `Buscador-Bluetooth-Geiger`
+  (público), este con la Release `v4.0-fase4`.
+
+**TRAMPA (MEDIDA).** Un comentario del `.gitignore` con forma de asignación («Secretos: claves…») dio ALTO 1 en
+`revisar_secretos.py`. Se corrigió la redacción y se rehízo el commit, que aún no estaba subido, para que el historial
+quedara limpio.
+
+**Verificación (MEDIDA).**
+- `revisar_secretos.py --todo` y `--historia`: ALTO 0 en los tres.
+- `gh repo view`: visibilidades y temas correctos.
+- El APK descargado de la Release tiene el mismo SHA-256 que el local (`4FBACD98…E8AD05`).
+
+**Commit:** el de esta entrada.

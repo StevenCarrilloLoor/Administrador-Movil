@@ -125,7 +125,9 @@ antes de implementar lo grande.
 - No usas la instancia 0 ni `apagar --todas`.
 - No metes librerías BLE de terceros.
 
-Commits locales sin preguntar: uno por frente, archivos añadidos por ruta y el porqué en el mensaje. Nada de push.
+Commits locales sin preguntar: uno por frente, archivos añadidos por ruta y el porqué en el mensaje. Nada de push:
+desde el 20-oct-2026 el repo tiene remoto público (`StevenCarrilloLoor/Buscador-Bluetooth-Geiger`, Release
+`v4.0-fase4`), y el push lo hace el administrador tras revisar.
 
 ### Terminado (para pedir la primera subida a prueba interna)
 - `verificar.bat` en verde con el toolchain nuevo;

@@ -39,10 +39,18 @@ identificación para que sea más fácil de usar para el usuario promedio». Se 
 7. **Nombre de paquete:** `com.steven.buscadorble` se conserva si Play lo acepta al crear la app (es único en Play).
 8. AAB de release sin firmar + `movil.bat revisar` sin bloqueos + solicitud (`docs/protocolo-apps.md`).
 
+## Firma y GitHub (20-oct-2026)
+- Clave de subida creada: `android-firma-buscador-geiger`, almacén `%USERPROFILE%\.secretos-moviles\firmas\buscador-geiger\`,
+  SHA-256 `28:90:95:58:85:B8:30:55:81:D1:B4:C2:0A:02:E1:85:52:4A:50:88:C2:D2:55:96:77:06:88:C1:1F:85:EF:28`. Es la que
+  firmará las subidas a Play. Copia de seguridad: PENDIENTE S6.
+- Repositorio público `StevenCarrilloLoor/Buscador-Bluetooth-Geiger` (rama `main`), Release `v4.0-fase4` con
+  `Baliza-4.0-fase4.apk`. MEDIDO: el SHA-256 del APK descargado de GitHub es igual al local.
+- La conversación de la app NO hace `push`: lo hace el administrador tras revisar, con `revisar_secretos.py` en ALTO 0.
+
 ## Versiones
 | versionCode | Fecha | Qué | Pista |
 |---|---|---|---|
-| 4 | jul-2026 | Fase 4 (inventario de red, identificación por capas) | Sin publicar |
+| 4 | jul-2026 / 20-oct-2026 | Fase 4 (inventario de red, identificación por capas). Recompilada el 20-oct-2026: `verificar.bat` en verde; `revisar` solo bloquea por targetSdk 35; firmada; en el laboratorio abre en 1,8 s sin cierres | GitHub Release `v4.0-fase4` (no en Play) |
 
 ## Comentarios de testers
 (vacío: se rellena durante la prueba cerrada; Google los pide al solicitar producción)
