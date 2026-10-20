@@ -79,7 +79,12 @@ con ese falso positivo: no se reescribe, porque nada de `push --force` y no hay 
 siguiente el árbol vuelve a dar ALTO 0, y `--historia` seguirá marcando ALTO 1 en `6848468 CAMBIOS.md`, que es
 **falso positivo conocido**. Regla nueva: antes de un `push`, el escáner se comprueba por su código de salida
 (`python -I revisar_secretos.py <carpeta> --todo && python -I revisar_secretos.py <carpeta> --historia && git push`),
-nunca con una tubería delante.
+nunca con una tubería delante. Después, la sesión coordinadora cambió dos cosas:
+- el escáner ya no toma por clave una palabra suelta en comentarios ni en `.md`;
+- la guía lleva ya la regla del `&&`.
+
+La huella del aviso de `6848468` (`683b0ed030f8`) está en `.secretos-revisados`, con su motivo, y `--historia` vuelve a
+dar ALTO 0.
 
 **Verificación (MEDIDA).**
 - `revisar_secretos.py --todo` y `--historia`: ALTO 0 en los tres.
